@@ -1,0 +1,15 @@
+{
+  "name": "chat-backend",
+  "version": "1.0.0",
+  "description": "Backend for Chat AI (Lambda Ready)",
+  "main": "lambda/chatHandler.js",
+  "scripts": {
+    "start": "node lambda/chatHandler.js",
+    "test-chat": "node lambda/chatHandler.js",
+    "test-upload": "node lambda/uploadHandler.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1484.0",
+    "openai": "^4.0.0"
+  }
+}
