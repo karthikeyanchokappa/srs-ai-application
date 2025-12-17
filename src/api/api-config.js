@@ -2,10 +2,11 @@
 //  API CONFIG FOR AWS GATEWAY
 // ===============================
 
-import { getToken } from "../AWS/auth"; // adjust path if needed
+import { getToken } from "../AWS/auth";
 
+// ✅ FROM ENV (no hardcoding)
 export const API_BASE_URL =
-  "https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com/prod";
+  import.meta.env.VITE_API_BASE_URL;
 
 export const ENDPOINTS = {
   chat: `${API_BASE_URL}/chat`,
@@ -15,28 +16,32 @@ export const ENDPOINTS = {
 // ===============================
 //  Reusable Request Handler
 // ===============================
-async function apiRequest(url, method = "POST", body = {}) {
-  const token = await getToken(); // <-- GET TOKEN AUTOMATICALLY
+async function apiRequest(url, method = "POST", body = null) {
+  const token = await getToken(); // JWT from Cognito
 
   const headers = {
     "Content-Type": "application/json",
   };
 
-  // attach authorization token
-  if (token) headers["Authorization"] = token;
+  // ✅ Correct Authorization format
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const options = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
 
   try {
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(url, options);
 
     if (!res.ok) {
-      return {
-        success: false,
-        error: `API Error: ${res.status}`,
-      };
+      throw new Error(`API Error: ${res.status}`);
     }
 
     return await res.json();
@@ -50,7 +55,7 @@ async function apiRequest(url, method = "POST", body = {}) {
 }
 
 // ===============================
-//  SEND CHAT MESSAGE TO AI BACKEND
+//  SEND CHAT MESSAGE
 // ===============================
 export async function sendChatMessage(chatId, text) {
   return apiRequest(ENDPOINTS.chat, "POST", {
@@ -60,7 +65,7 @@ export async function sendChatMessage(chatId, text) {
 }
 
 // ===============================
-//  UPLOAD FILE TO S3 (via Lambda)
+//  UPLOAD FILE
 // ===============================
 export async function uploadFile(file) {
   const base64 = await fileToBase64(file);
@@ -72,12 +77,15 @@ export async function uploadFile(file) {
   });
 }
 
-// Convert file → base64
+// ===============================
+//  FILE → BASE64
+// ===============================
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onload = () =>
+      resolve(reader.result.split(",")[1]);
     reader.onerror = reject;
   });
 }

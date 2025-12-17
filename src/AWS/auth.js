@@ -2,7 +2,7 @@ import {
   signIn,
   confirmSignIn,
   fetchAuthSession,
-  signOut
+  signOut,
 } from "aws-amplify/auth";
 
 /**
@@ -12,9 +12,9 @@ export const sendOtp = async (email) => {
   return await signIn({
     username: email,
     options: {
-      authFlowType: "USER_AUTH", // ✅ NOT CUSTOM_AUTH
-      preferredChallenge: "EMAIL_OTP"
-    }
+      authFlowType: "USER_AUTH",
+      preferredChallenge: "EMAIL_OTP",
+    },
   });
 };
 
@@ -23,16 +23,25 @@ export const sendOtp = async (email) => {
  */
 export const verifyOtp = async (code) => {
   return await confirmSignIn({
-    challengeResponse: code
+    challengeResponse: code,
   });
 };
 
 /**
- * GET TOKEN
+ * GET ACCESS TOKEN (JWT)
  */
 export const getToken = async () => {
-  const session = await fetchAuthSession();
-  return session.tokens?.idToken?.toString();
+  try {
+    const session = await fetchAuthSession();
+
+    const accessToken =
+      session.tokens?.accessToken?.toString();
+
+    return accessToken || null;
+  } catch (err) {
+    console.warn("No auth session found");
+    return null;
+  }
 };
 
 /**

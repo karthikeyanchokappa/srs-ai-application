@@ -1,5 +1,5 @@
-export const awsConfig = {
-  region: "ap-south-1",
-  userPoolId: "YOUR_USER_POOL_ID",
-  clientId: "YOUR_CLIENT_ID",
+export const AWS_CONFIG = {
+  region: import.meta.env.VITE_AWS_REGION,
+  userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+  clientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
 };

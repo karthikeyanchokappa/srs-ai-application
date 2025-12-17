@@ -1,18 +1,8 @@
-// src/Components/ChatWindow/ChatWindow.jsx
-
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatWindow.css";
 import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
-
-// Simulated API
-const sendToApiDefault = async (messages) => {
-  await new Promise((r) => setTimeout(r, 500));
-  return {
-    success: true,
-    text: "Simulated reply: " + messages[messages.length - 1]?.text,
-  };
-};
+import { sendMessageToBackend } from "../../api/chatApi";
 
 const ChatWindow = ({ chat, updateMessages }) => {
   const [input, setInput] = useState("");
@@ -21,7 +11,7 @@ const ChatWindow = ({ chat, updateMessages }) => {
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
 
-  /* AUTO-SCROLL */
+  /* AUTO SCROLL */
   useEffect(() => {
     requestAnimationFrame(() => {
       if (scrollRef.current) {
@@ -37,55 +27,78 @@ const ChatWindow = ({ chat, updateMessages }) => {
 
   /* DELETE MESSAGE */
   const deleteMessage = (id) => {
-    updateMessages(chat.messages.filter((msg) => msg.id !== id));
+    updateMessages(chat.messages.filter((m) => m.id !== id));
   };
 
-  /* REACTIONS — 👍 👎 */
+  /* REACTIONS */
   const handleReaction = (id, type) => {
     updateMessages(
-      chat.messages.map((msg) =>
-        msg.id === id ? { ...msg, reaction: type } : msg
+      chat.messages.map((m) =>
+        m.id === id ? { ...m, reaction: type } : m
       )
     );
   };
 
-  /* SEND MESSAGE */
+  /* SEND MESSAGE → BACKEND */
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
-    const userMsg = { id: Date.now().toString(), sender: "user", text };
+    const userMsg = {
+      id: Date.now().toString(),
+      sender: "user",
+      text,
+    };
 
     addMessage(userMsg);
     setInput("");
     setIsTyping(true);
 
-    const response = await sendToApiDefault([...chat.messages, userMsg]);
-    setIsTyping(false);
+    try {
+      const res = await sendMessageToBackend(text);
 
-    const botMsg = {
-      id: (Date.now() + 1).toString(),
-      sender: "bot",
-      text: response.text,
-    };
+      const botMsg = {
+        id: (Date.now() + 1).toString(),
+        sender: "bot",
+        text: res.reply || "No response from server",
+      };
 
-    addMessage(botMsg);
+      addMessage(botMsg);
+    } catch (err) {
+      addMessage({
+        id: "err_" + Date.now(),
+        sender: "bot",
+        text: "❌ Failed to connect to server",
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  /* REGENERATE */
+  /* REGENERATE MESSAGE */
   const regenerateMessage = async (prompt) => {
     setIsTyping(true);
-    const res = await sendToApiDefault([{ sender: "user", text: prompt }]);
-    setIsTyping(false);
 
-    addMessage({
-      id: `regen_${Date.now()}`,
-      sender: "bot",
-      text: res.text,
-    });
+    try {
+      const res = await sendMessageToBackend(prompt);
+
+      addMessage({
+        id: `regen_${Date.now()}`,
+        sender: "bot",
+        text: res.reply || "No response from server",
+      });
+    } catch {
+      addMessage({
+        id: `regen_err_${Date.now()}`,
+        sender: "bot",
+        text: "❌ Failed to regenerate response",
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  /* AUTO-GROW TEXTAREA */
+  /* AUTO GROW TEXTAREA */
   const resizeTextarea = () => {
     const el = textareaRef.current;
     if (!el) return;
@@ -95,7 +108,7 @@ const ChatWindow = ({ chat, updateMessages }) => {
 
   return (
     <main className="chat-main chat-layout">
-      {/* WELCOME SCREEN */}
+      {/* WELCOME */}
       {chat.messages.length === 0 ? (
         <div className="welcome-screen">
           <div className="welcome-inner">
@@ -114,67 +127,62 @@ const ChatWindow = ({ chat, updateMessages }) => {
             {chat.messages.map((m) => (
               <div key={m.id} className={`msg-row ${m.sender}`}>
                 <div className="msg-bubble">
-
-                  {/* MESSAGE CONTENT */}
                   <MarkdownRenderer text={m.text} />
 
-                  {/* 🔥 ACTION BAR (Copy / Delete / Regenerate / Reactions) */}
                   <div className="msg-actions-row">
-
-                    {/* Copy */}
+                    {/* COPY */}
                     <button
                       className="msg-action-btn"
-                      title="Copy message"
-                      onClick={() => navigator.clipboard.writeText(m.text)}
+                      onClick={() =>
+                        navigator.clipboard.writeText(m.text)
+                      }
                     >
                       <span className="material-symbols-outlined">
                         content_copy
                       </span>
                     </button>
 
-                    {/* Delete */}
+                    {/* DELETE */}
                     <button
                       className="msg-action-btn"
-                      title="Delete message"
                       onClick={() => deleteMessage(m.id)}
                     >
-                      <span className="material-symbols-outlined">delete</span>
+                      <span className="material-symbols-outlined">
+                        delete
+                      </span>
                     </button>
 
-                    {/* Regenerate — only for bot */}
+                    {/* REGENERATE */}
                     {m.sender === "bot" && (
                       <button
                         className="msg-action-btn"
-                        title="Regenerate response"
                         onClick={() => regenerateMessage(m.text)}
                       >
-                        <span className="material-symbols-outlined">refresh</span>
+                        <span className="material-symbols-outlined">
+                          refresh
+                        </span>
                       </button>
                     )}
 
-                    {/* ⭐ Reactions (👍 / 👎) — only for bot */}
+                    {/* REACTIONS */}
                     {m.sender === "bot" && (
                       <>
-                        {/* 👍 Good Response */}
                         <button
                           className={`reaction-btn up ${
                             m.reaction === "up" ? "active" : ""
                           }`}
                           onClick={() => handleReaction(m.id, "up")}
-                          title="Good response"
                         >
                           <span className="material-symbols-outlined">
                             thumb_up
                           </span>
                         </button>
 
-                        {/* 👎 Bad Response */}
                         <button
                           className={`reaction-btn down ${
                             m.reaction === "down" ? "active down" : ""
                           }`}
                           onClick={() => handleReaction(m.id, "down")}
-                          title="Poor response"
                         >
                           <span className="material-symbols-outlined">
                             thumb_down
@@ -187,7 +195,7 @@ const ChatWindow = ({ chat, updateMessages }) => {
               </div>
             ))}
 
-            {/* TYPING INDICATOR */}
+            {/* TYPING */}
             {isTyping && (
               <div className="msg-row bot">
                 <div className="msg-bubble typing">
@@ -204,7 +212,6 @@ const ChatWindow = ({ chat, updateMessages }) => {
       {/* INPUT BAR */}
       <div className="chat-input-bar">
         <div className="chat-input-wrapper">
-
           <label className="cw-icon cw-upload">
             <UploadIcon />
             <input type="file" className="file-input" />
@@ -215,11 +222,11 @@ const ChatWindow = ({ chat, updateMessages }) => {
             className="chat-textarea"
             placeholder="Ask anything..."
             value={input}
+            rows={1}
             onChange={(e) => {
               setInput(e.target.value);
               resizeTextarea();
             }}
-            rows={1}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -235,7 +242,6 @@ const ChatWindow = ({ chat, updateMessages }) => {
           <button className="cw-send" onClick={handleSend}>
             <SendIcon />
           </button>
-
         </div>
       </div>
     </main>

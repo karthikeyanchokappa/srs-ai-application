@@ -3,11 +3,11 @@ import { Amplify } from "aws-amplify";
 Amplify.configure({
   Auth: {
     Cognito: {
-      userPoolId: "ap-south-1_idPb2CQ3Z",
-      userPoolClientId: "5q8m5kgvagaq73l178ms7ccj3s",
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
       loginWith: {
-        email: true
-      }
-    }
-  }
+        email: true,
+      },
+    },
+  },
 });
