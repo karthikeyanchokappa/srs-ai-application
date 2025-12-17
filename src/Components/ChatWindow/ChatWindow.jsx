@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 // src/Components/ChatWindow/ChatWindow.jsx
 
+=======
+>>>>>>> feature/test
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatWindow.css";
 import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
+<<<<<<< HEAD
 
 // Simulated API
 const sendToApiDefault = async (messages) => {
@@ -13,6 +17,9 @@ const sendToApiDefault = async (messages) => {
     text: "Simulated reply: " + messages[messages.length - 1]?.text,
   };
 };
+=======
+import { sendMessageToBackend } from "../../api/chatApi";
+>>>>>>> feature/test
 
 const ChatWindow = ({ chat, updateMessages }) => {
   const [input, setInput] = useState("");
@@ -21,7 +28,11 @@ const ChatWindow = ({ chat, updateMessages }) => {
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
 
+<<<<<<< HEAD
   /* AUTO-SCROLL */
+=======
+  /* AUTO SCROLL */
+>>>>>>> feature/test
   useEffect(() => {
     requestAnimationFrame(() => {
       if (scrollRef.current) {
@@ -37,6 +48,7 @@ const ChatWindow = ({ chat, updateMessages }) => {
 
   /* DELETE MESSAGE */
   const deleteMessage = (id) => {
+<<<<<<< HEAD
     updateMessages(chat.messages.filter((msg) => msg.id !== id));
   };
 
@@ -45,21 +57,44 @@ const ChatWindow = ({ chat, updateMessages }) => {
     updateMessages(
       chat.messages.map((msg) =>
         msg.id === id ? { ...msg, reaction: type } : msg
+=======
+    updateMessages(chat.messages.filter((m) => m.id !== id));
+  };
+
+  /* REACTIONS */
+  const handleReaction = (id, type) => {
+    updateMessages(
+      chat.messages.map((m) =>
+        m.id === id ? { ...m, reaction: type } : m
+>>>>>>> feature/test
       )
     );
   };
 
+<<<<<<< HEAD
   /* SEND MESSAGE */
+=======
+  /* SEND MESSAGE → BACKEND */
+>>>>>>> feature/test
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
+<<<<<<< HEAD
     const userMsg = { id: Date.now().toString(), sender: "user", text };
+=======
+    const userMsg = {
+      id: Date.now().toString(),
+      sender: "user",
+      text,
+    };
+>>>>>>> feature/test
 
     addMessage(userMsg);
     setInput("");
     setIsTyping(true);
 
+<<<<<<< HEAD
     const response = await sendToApiDefault([...chat.messages, userMsg]);
     setIsTyping(false);
 
@@ -86,6 +121,53 @@ const ChatWindow = ({ chat, updateMessages }) => {
   };
 
   /* AUTO-GROW TEXTAREA */
+=======
+    try {
+      const res = await sendMessageToBackend(text);
+
+      const botMsg = {
+        id: (Date.now() + 1).toString(),
+        sender: "bot",
+        text: res.reply || "No response from server",
+      };
+
+      addMessage(botMsg);
+    } catch (err) {
+      addMessage({
+        id: "err_" + Date.now(),
+        sender: "bot",
+        text: "❌ Failed to connect to server",
+      });
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  /* REGENERATE MESSAGE */
+  const regenerateMessage = async (prompt) => {
+    setIsTyping(true);
+
+    try {
+      const res = await sendMessageToBackend(prompt);
+
+      addMessage({
+        id: `regen_${Date.now()}`,
+        sender: "bot",
+        text: res.reply || "No response from server",
+      });
+    } catch {
+      addMessage({
+        id: `regen_err_${Date.now()}`,
+        sender: "bot",
+        text: "❌ Failed to regenerate response",
+      });
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  /* AUTO GROW TEXTAREA */
+>>>>>>> feature/test
   const resizeTextarea = () => {
     const el = textareaRef.current;
     if (!el) return;
@@ -95,7 +177,11 @@ const ChatWindow = ({ chat, updateMessages }) => {
 
   return (
     <main className="chat-main chat-layout">
+<<<<<<< HEAD
       {/* WELCOME SCREEN */}
+=======
+      {/* WELCOME */}
+>>>>>>> feature/test
       {chat.messages.length === 0 ? (
         <div className="welcome-screen">
           <div className="welcome-inner">
@@ -114,6 +200,7 @@ const ChatWindow = ({ chat, updateMessages }) => {
             {chat.messages.map((m) => (
               <div key={m.id} className={`msg-row ${m.sender}`}>
                 <div className="msg-bubble">
+<<<<<<< HEAD
 
                   {/* MESSAGE CONTENT */}
                   <MarkdownRenderer text={m.text} />
@@ -126,12 +213,24 @@ const ChatWindow = ({ chat, updateMessages }) => {
                       className="msg-action-btn"
                       title="Copy message"
                       onClick={() => navigator.clipboard.writeText(m.text)}
+=======
+                  <MarkdownRenderer text={m.text} />
+
+                  <div className="msg-actions-row">
+                    {/* COPY */}
+                    <button
+                      className="msg-action-btn"
+                      onClick={() =>
+                        navigator.clipboard.writeText(m.text)
+                      }
+>>>>>>> feature/test
                     >
                       <span className="material-symbols-outlined">
                         content_copy
                       </span>
                     </button>
 
+<<<<<<< HEAD
                     {/* Delete */}
                     <button
                       className="msg-action-btn"
@@ -156,25 +255,61 @@ const ChatWindow = ({ chat, updateMessages }) => {
                     {m.sender === "bot" && (
                       <>
                         {/* 👍 Good Response */}
+=======
+                    {/* DELETE */}
+                    <button
+                      className="msg-action-btn"
+                      onClick={() => deleteMessage(m.id)}
+                    >
+                      <span className="material-symbols-outlined">
+                        delete
+                      </span>
+                    </button>
+
+                    {/* REGENERATE */}
+                    {m.sender === "bot" && (
+                      <button
+                        className="msg-action-btn"
+                        onClick={() => regenerateMessage(m.text)}
+                      >
+                        <span className="material-symbols-outlined">
+                          refresh
+                        </span>
+                      </button>
+                    )}
+
+                    {/* REACTIONS */}
+                    {m.sender === "bot" && (
+                      <>
+>>>>>>> feature/test
                         <button
                           className={`reaction-btn up ${
                             m.reaction === "up" ? "active" : ""
                           }`}
                           onClick={() => handleReaction(m.id, "up")}
+<<<<<<< HEAD
                           title="Good response"
+=======
+>>>>>>> feature/test
                         >
                           <span className="material-symbols-outlined">
                             thumb_up
                           </span>
                         </button>
 
+<<<<<<< HEAD
                         {/* 👎 Bad Response */}
+=======
+>>>>>>> feature/test
                         <button
                           className={`reaction-btn down ${
                             m.reaction === "down" ? "active down" : ""
                           }`}
                           onClick={() => handleReaction(m.id, "down")}
+<<<<<<< HEAD
                           title="Poor response"
+=======
+>>>>>>> feature/test
                         >
                           <span className="material-symbols-outlined">
                             thumb_down
@@ -187,7 +322,11 @@ const ChatWindow = ({ chat, updateMessages }) => {
               </div>
             ))}
 
+<<<<<<< HEAD
             {/* TYPING INDICATOR */}
+=======
+            {/* TYPING */}
+>>>>>>> feature/test
             {isTyping && (
               <div className="msg-row bot">
                 <div className="msg-bubble typing">
@@ -204,7 +343,10 @@ const ChatWindow = ({ chat, updateMessages }) => {
       {/* INPUT BAR */}
       <div className="chat-input-bar">
         <div className="chat-input-wrapper">
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/test
           <label className="cw-icon cw-upload">
             <UploadIcon />
             <input type="file" className="file-input" />
@@ -215,11 +357,18 @@ const ChatWindow = ({ chat, updateMessages }) => {
             className="chat-textarea"
             placeholder="Ask anything..."
             value={input}
+<<<<<<< HEAD
+=======
+            rows={1}
+>>>>>>> feature/test
             onChange={(e) => {
               setInput(e.target.value);
               resizeTextarea();
             }}
+<<<<<<< HEAD
             rows={1}
+=======
+>>>>>>> feature/test
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -235,7 +384,10 @@ const ChatWindow = ({ chat, updateMessages }) => {
           <button className="cw-send" onClick={handleSend}>
             <SendIcon />
           </button>
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature/test
         </div>
       </div>
     </main>

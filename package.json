@@ -10,6 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
+=======
+    "amazon-cognito-identity-js": "^6.3.16",
+    "aws-amplify": "^6.15.9",
+    "aws-sdk": "^2.1693.0",
+    "buffer": "^6.0.3",
+>>>>>>> feature/test
     "highlight.js": "^11.11.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

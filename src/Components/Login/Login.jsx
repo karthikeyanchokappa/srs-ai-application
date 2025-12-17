@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./Login.css";
 import OtpScreen from "./OtpScreen";
+<<<<<<< HEAD
 import ForgotPassword from "./ForgotPassword";
 import Signup from "./Signup";
 
@@ -21,22 +22,52 @@ const Login = ({ onAuthenticate }) => {
   const fakeLogin = () => {
     if (!email.trim() || !password.trim()) {
       setError("Email and password are required.");
+=======
+import { sendOtp, logout } from "../../AWS/auth";
+
+const Login = ({ onAuthenticate }) => {
+  const [step, setStep] = useState("email");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSendOtp = async () => {
+    if (!email.trim()) {
+      setError("Email is required");
+>>>>>>> feature/test
       return;
     }
 
     setError("");
     setLoading(true);
 
+<<<<<<< HEAD
     // Fake API delay
     setTimeout(() => {
       setLoading(false);
       setStep("otp");
     }, 1000);
+=======
+    try {
+      // 🔥 IMPORTANT: clear any existing session
+      await logout();
+
+      // 🔥 always start a fresh OTP flow
+      await sendOtp(email);
+
+      setStep("otp");
+    } catch (err) {
+      setError(err.message || "Failed to send OTP");
+    }
+
+    setLoading(false);
+>>>>>>> feature/test
   };
 
   return (
     <div className="login-page fade-in">
 
+<<<<<<< HEAD
       {/* ============================= */}
       {/* LOGIN SCREEN */}
       {/* ============================= */}
@@ -47,6 +78,13 @@ const Login = ({ onAuthenticate }) => {
           <p className="login-sub">Sign in to continue</p>
 
           {/* Email */}
+=======
+      {step === "email" && (
+        <div className="login-card slide-up">
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-sub">Enter your email to continue</p>
+
+>>>>>>> feature/test
           <div className="input-group">
             <span className="material-symbols-outlined input-icon">mail</span>
             <input
@@ -57,6 +95,7 @@ const Login = ({ onAuthenticate }) => {
             />
           </div>
 
+<<<<<<< HEAD
           {/* Password */}
           <div className="input-group">
             <span className="material-symbols-outlined input-icon">lock</span>
@@ -141,6 +180,30 @@ const Login = ({ onAuthenticate }) => {
         <Signup onBack={() => setStep("login")} />
       )}
 
+=======
+          {error && <p className="error-text">{error}</p>}
+
+          <button
+            className="login-btn"
+            onClick={handleSendOtp}
+            disabled={loading}
+          >
+            {loading ? "Sending OTP..." : "Authenticate"}
+          </button>
+
+          <p className="footer-text">Passwordless secure login</p>
+        </div>
+      )}
+
+      {step === "otp" && (
+        <OtpScreen
+          email={email}
+          onSuccess={onAuthenticate}
+          onBack={() => setStep("email")}
+        />
+      )}
+
+>>>>>>> feature/test
     </div>
   );
 };
