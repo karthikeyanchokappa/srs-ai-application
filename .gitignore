@@ -27,6 +27,7 @@ logs/
 .cache/
 .next/
 tmp/
+<<<<<<< Updated upstream
 =======
 # Logs
 logs
@@ -53,3 +54,8 @@ dist-ssr
 *.sln
 *.sw?
 >>>>>>> feature/test
+=======
+# OS files
+.DS_Store
+Thumbs.db
+>>>>>>> Stashed changes
