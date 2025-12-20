@@ -1,29 +1,33 @@
 // ===============================
-//  API CONFIG FOR AWS GATEWAY
+//  API CONFIG FOR AWS HTTP API
 // ===============================
 
 import { getToken } from "../AWS/auth";
 
-// ✅ FROM ENV (no hardcoding)
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL;
+// ✅ Base URL from .env
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// ✅ HTTP API uses $default route (no /chat)
 export const ENDPOINTS = {
-  chat: `${API_BASE_URL}/chat`,
-  upload: `${API_BASE_URL}/upload`,
+  chat: `${API_BASE_URL}`,
 };
 
 // ===============================
-//  Reusable Request Handler
+//  Generic Request Helper
 // ===============================
 async function apiRequest(url, method = "POST", body = null) {
-  const token = await getToken(); // JWT from Cognito
+  let token = null;
+
+  try {
+    token = await getToken(); // Cognito JWT (optional if API auth = NONE)
+  } catch {
+    token = null;
+  }
 
   const headers = {
     "Content-Type": "application/json",
   };
 
-  // ✅ Correct Authorization format
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -31,61 +35,42 @@ async function apiRequest(url, method = "POST", body = null) {
   const options = {
     method,
     headers,
+    body: body ? JSON.stringify(body) : null,
   };
 
-  if (body) {
-    options.body = JSON.stringify(body);
+  const res = await fetch(url, options);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API Error ${res.status}: ${text}`);
   }
 
-  try {
-    const res = await fetch(url, options);
-
-    if (!res.ok) {
-      throw new Error(`API Error: ${res.status}`);
-    }
-
-    return await res.json();
-  } catch (err) {
-    console.error("API Request Failed:", err);
-    return {
-      success: false,
-      error: err.message || "Network request failed",
-    };
-  }
+  return res.json();
 }
 
 // ===============================
-//  SEND CHAT MESSAGE
+//  SEND CHAT MESSAGE (BACKEND FORMAT)
 // ===============================
 export async function sendChatMessage(chatId, text) {
-  return apiRequest(ENDPOINTS.chat, "POST", {
-    chatId,
-    userMessage: text,
-  });
+  let userEmail = "unknown@user";
+
+  try {
+    const token = await getToken();
+    const decoded = JSON.parse(atob(token.split(".")[1]));
+    userEmail = decoded.email || decoded.username;
+  } catch {
+    console.warn("Unable to extract user email from token");
+  }
+
+  const payload = {
+    action: "prompt",
+    session: {
+      UserId: userEmail,
+      SessionId: chatId,
+      UserPrompt: text,
+    },
+  };
+
+  return apiRequest(ENDPOINTS.chat, "POST", payload);
 }
 
-// ===============================
-//  UPLOAD FILE
-// ===============================
-export async function uploadFile(file) {
-  const base64 = await fileToBase64(file);
-
-  return apiRequest(ENDPOINTS.upload, "POST", {
-    fileName: file.name,
-    fileType: file.type,
-    fileData: base64,
-  });
-}
-
-// ===============================
-//  FILE → BASE64
-// ===============================
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () =>
-      resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-  });
-}

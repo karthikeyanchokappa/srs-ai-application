@@ -18,11 +18,6 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   // 🔍 TEMP: Verify JWT token after login
   // 🔍 TEMP: Verify JWT token after login
 
-  useEffect(() => {
-    getToken().then((token) => {
-      console.log("JWT Token:", token);
-    });
-  }, []);
 
   const createChat = () => {
     const newChat = {
