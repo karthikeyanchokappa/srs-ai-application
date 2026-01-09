@@ -4,67 +4,69 @@ import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { sendChatMessage } from "../../api/api-config";
 
-const ChatWindow = ({ chat, updateMessages }) => {
+const ChatWindow = ({ chat, updateMessages, user }) => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
 
-  /* AUTO SCROLL */
+  /* ===============================
+     AUTO SCROLL
+  =============================== */
   useEffect(() => {
-    requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    });
-  }, [chat, isTyping]);
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [chat?.messages, isTyping]);
 
-  /* ADD MESSAGE */
+  /* ===============================
+     ADD MESSAGE (SAFE)
+  =============================== */
   const addMessage = (msg) => {
-    updateMessages([...(chat.messages || []), msg]);
+    updateMessages((prev) => [...prev, msg]);
   };
 
-  /* DELETE MESSAGE */
-  const deleteMessage = (id) => {
-    updateMessages(chat.messages.filter((m) => m.id !== id));
-  };
-
-  /* REACTIONS */
-  const handleReaction = (id, type) => {
-    updateMessages(
-      chat.messages.map((m) =>
-        m.id === id ? { ...m, reaction: type } : m
-      )
-    );
-  };
-
-  /* SEND MESSAGE → BACKEND */
+  /* ===============================
+     SEND MESSAGE
+  =============================== */
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
-    const userMsg = {
+    // Always show user's message
+    addMessage({
       id: Date.now().toString(),
       sender: "user",
       text,
-    };
+    });
 
-    addMessage(userMsg);
     setInput("");
     setIsTyping(true);
 
-    try {
-      const res = await sendChatMessage(chat.id, text);
+    // If no task selected → show warning but DO NOT break UI
+    if (!chat || !user) {
+      addMessage({
+        id: "warn_" + Date.now(),
+        sender: "bot",
+        text: "⚠️ Please select a task from the left sidebar.",
+      });
+      setIsTyping(false);
+      return;
+    }
 
-      const botMsg = {
-        id: (Date.now() + 1).toString(),
+    try {
+      const res = await sendChatMessage(
+        chat.id,
+        text,
+        user.email
+      );
+
+      addMessage({
+        id: "bot_" + Date.now(),
         sender: "bot",
         text: res.reply || res.message || "No response from server",
-      };
-
-      addMessage(botMsg);
-    } catch (err) {
+      });
+    } catch {
       addMessage({
         id: "err_" + Date.now(),
         sender: "bot",
@@ -75,30 +77,9 @@ const ChatWindow = ({ chat, updateMessages }) => {
     }
   };
 
-  /* REGENERATE MESSAGE */
-  const regenerateMessage = async (prompt) => {
-    setIsTyping(true);
-
-    try {
-      const res = await sendChatMessage(chat.id, prompt);
-
-      addMessage({
-        id: `regen_${Date.now()}`,
-        sender: "bot",
-        text: res.reply || res.message || "No response from server",
-      });
-    } catch {
-      addMessage({
-        id: `regen_err_${Date.now()}`,
-        sender: "bot",
-        text: "❌ Failed to regenerate response",
-      });
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  /* AUTO GROW TEXTAREA */
+  /* ===============================
+     AUTO GROW TEXTAREA
+  =============================== */
   const resizeTextarea = () => {
     const el = textareaRef.current;
     if (!el) return;
@@ -108,42 +89,48 @@ const ChatWindow = ({ chat, updateMessages }) => {
 
   return (
     <main className="chat-main chat-layout">
-      {chat.messages.length === 0 ? (
-        <div className="welcome-screen">
-          <div className="welcome-inner">
-            <h1 className="welcome-title">What are you working on?</h1>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="chatgpt-header">
-            <div className="model-name">ChatAI Model</div>
-          </div>
+      {/* HEADER */}
+   
 
-          <div className="messages" ref={scrollRef}>
-            {chat.messages.map((m) => (
-              <div key={m.id} className={`msg-row ${m.sender}`}>
-                <div className="msg-bubble">
-                  <MarkdownRenderer text={m.text} />
-                </div>
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="msg-row bot">
-                <div className="msg-bubble typing">
-                  <span className="dot"></span>
-                  <span className="dot"></span>
-                  <span className="dot"></span>
-                </div>
-              </div>
-            )}
+      {/* MESSAGES — ALWAYS RENDER */}
+      <div className="messages" ref={scrollRef}>
+        {chat?.messages?.length === 0 && (
+          <div className="welcome-screen">
+            <div className="welcome-inner">
+              <h1 className="welcome-title">
+                What are you working on?
+              </h1>
+            </div>
           </div>
-        </>
-      )}
+        )}
 
+        {chat?.messages?.map((m) => (
+          <div key={m.id} className={`msg-row ${m.sender}`}>
+            <div className="msg-bubble">
+              <MarkdownRenderer text={m.text} />
+            </div>
+          </div>
+        ))}
+
+        {isTyping && (
+          <div className="msg-row bot">
+            <div className="msg-bubble typing">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* INPUT BAR — OLD UI */}
       <div className="chat-input-bar">
         <div className="chat-input-wrapper">
+          <label className="cw-icon cw-upload">
+            <UploadIcon />
+            <input type="file" />
+          </label>
+
           <textarea
             ref={textareaRef}
             className="chat-textarea"
@@ -161,6 +148,10 @@ const ChatWindow = ({ chat, updateMessages }) => {
               }
             }}
           />
+
+          <button className="cw-icon cw-mic">
+            <MicIcon />
+          </button>
 
           <button className="cw-send" onClick={handleSend}>
             <SendIcon />

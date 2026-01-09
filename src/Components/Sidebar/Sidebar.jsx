@@ -1,4 +1,3 @@
-
 // src/Components/Sidebar/Sidebar.jsx
 import React, { useState } from "react";
 import "./Sidebar.css";
@@ -13,6 +12,7 @@ import {
 } from "./icons";
 
 const Sidebar = ({
+  user,               // logged-in user profile
   chats = [],
   activeId,
   setActive,
@@ -35,7 +35,6 @@ const Sidebar = ({
       )
     : chats;
 
-  // Collapse sidebar on mobile automatically
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
     setProfileOpen(false);
@@ -43,7 +42,7 @@ const Sidebar = ({
 
   return (
     <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
-      {/* ---------------- TOP BAR ---------------- */}
+      {/* TOP BAR */}
       <div className="sidebar-topbar">
         <button className="menu-btn" onClick={toggleSidebar}>
           ☰
@@ -51,7 +50,7 @@ const Sidebar = ({
         {sidebarOpen && <div className="sidebar-logo">ChatAI</div>}
       </div>
 
-      {/* ---------------- SEARCH BOX ---------------- */}
+      {/* SEARCH */}
       {sidebarOpen && (
         <div className="sidebar-search-container">
           <input
@@ -63,14 +62,17 @@ const Sidebar = ({
           />
 
           {search && (
-            <button className="icon-btn clear-btn" onClick={() => setSearch("")}>
+            <button
+              className="icon-btn clear-btn"
+              onClick={() => setSearch("")}
+            >
               ✖
             </button>
           )}
         </div>
       )}
 
-      {/* ---------------- NEW CHAT BUTTON ---------------- */}
+      {/* NEW CHAT */}
       {sidebarOpen && (
         <button className="new-chat-btn" onClick={onCreate}>
           <PlusIcon />
@@ -78,21 +80,23 @@ const Sidebar = ({
         </button>
       )}
 
-
-      {/* ---------------- LABEL ---------------- */}
       {sidebarOpen && <div className="label">Your Chats</div>}
 
-      {/* ---------------- CHAT LIST ---------------- */}
+      {/* CHAT LIST */}
       <div className="chat-list">
         {filteredChats.map((chat) => (
           <div
             key={chat.id}
-            className={`chat-item ${chat.id === activeId ? "active" : ""}`}
+            className={`chat-item ${
+              chat.id === activeId ? "active" : ""
+            }`}
             onClick={() => setActive(chat.id)}
           >
             <div className="chat-left">
               <ChatIcon />
-              {sidebarOpen && <span className="chat-title">{chat.title}</span>}
+              {sidebarOpen && (
+                <span className="chat-title">{chat.title}</span>
+              )}
             </div>
 
             {sidebarOpen && (
@@ -126,34 +130,53 @@ const Sidebar = ({
         )}
       </div>
 
-      {/* ---------------- PROFILE SECTION ---------------- */}
+      {/* PROFILE */}
       {sidebarOpen && (
         <div className="profile-container">
-          {/* Profile Row */}
           <div
             className="profile-row"
             onClick={() => setProfileOpen(!profileOpen)}
           >
-            <div className="avatar">P</div>
-            <div className="username">Your Name</div>
+            <div className="profile-avatar">
+              {user?.initial || "U"}
+            </div>
+
+            <div className="profile-info">
+              <div className="profile-name">
+                {user?.name || "Your Name"}
+              </div>
+              <div className="profile-email">
+                {user?.email}
+              </div>
+            </div>
           </div>
 
-          {/* Dropdown Menu */}
           {profileOpen && (
             <div className="profile-dropdown">
-              <button className="dropdown-item">Help & Support</button>
+              <button className="dropdown-item">
+                Help & Support
+              </button>
 
-              <button className="dropdown-item" onClick={onLogout}>
+              <button
+                className="dropdown-item"
+                onClick={onLogout}
+              >
                 Sign out
               </button>
 
               <div className="dropdown-divider"></div>
 
-              {/* Theme Toggle */}
               <div className="theme-row">
                 <span>Theme</span>
-                <button className="icon-btn" onClick={toggleTheme}>
-                  {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                <button
+                  className="icon-btn"
+                  onClick={toggleTheme}
+                >
+                  {theme === "dark" ? (
+                    <SunIcon />
+                  ) : (
+                    <MoonIcon />
+                  )}
                 </button>
               </div>
             </div>

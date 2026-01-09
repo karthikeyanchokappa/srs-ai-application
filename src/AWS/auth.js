@@ -6,10 +6,10 @@ import {
 } from "aws-amplify/auth";
 
 /**
- * STEP 1: Send Email OTP (Passwordless)
+ * STEP 1: Send Email OTP
  */
 export const sendOtp = async (email) => {
-  return await signIn({
+  return signIn({
     username: email,
     options: {
       authFlowType: "USER_AUTH",
@@ -22,24 +22,54 @@ export const sendOtp = async (email) => {
  * STEP 2: Verify OTP
  */
 export const verifyOtp = async (code) => {
-  return await confirmSignIn({
+  return confirmSignIn({
     challengeResponse: code,
   });
 };
 
 /**
- * GET ACCESS TOKEN (JWT)
+ * GET ACCESS TOKEN (optional)
  */
-export const getToken = async () => {
+export const getAccessToken = async () => {
   try {
     const session = await fetchAuthSession();
+    return session.tokens?.accessToken?.toString() || null;
+  } catch {
+    return null;
+  }
+};
 
-    const accessToken =
-      session.tokens?.accessToken?.toString();
+/**
+ * ✅ GET ID TOKEN (USED BY BACKEND API)
+ */
+export const getIdToken = async () => {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString() || null;
+  } catch {
+    return null;
+  }
+};
 
-    return accessToken || null;
+/**
+ * GET USER PROFILE (FROM ID TOKEN)
+ */
+export const getUserProfile = async () => {
+  try {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    if (!idToken) return null;
+
+    const payload = JSON.parse(atob(idToken.split(".")[1]));
+    const email = payload.email;
+
+    return {
+      email,
+      name: payload.name || email,
+      initial: (payload.name || email)[0].toUpperCase(),
+    };
   } catch (err) {
-    console.warn("No auth session found");
+    console.error("getUserProfile failed", err);
     return null;
   }
 };

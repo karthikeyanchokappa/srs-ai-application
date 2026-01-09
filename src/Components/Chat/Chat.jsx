@@ -2,55 +2,137 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../Sidebar/Sidebar";
 import ChatWindow from "../ChatWindow/ChatWindow";
-import { getToken } from "../../AWS/auth";
+import { getUserProfile } from "../../AWS/auth";
+import {
+  fetchUserTasks,
+  fetchChatHistory,
+} from "../../api/api-config";
 import "./Chat.css";
 
 const Chat = ({ theme, toggleTheme, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [chats, setChats] = useState([
-    { id: "1", title: "New Chat", messages: [] },
-  ]);
+  // ===============================
+  // USER PROFILE
+  // ===============================
+  const [user, setUser] = useState(null);
 
-  const [activeChatId, setActiveChatId] = useState("1");
-  const activeChat = chats.find((c) => c.id === activeChatId);
+  // ===============================
+  // CHAT / TASK SESSIONS
+  // ===============================
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
 
-  // 🔍 TEMP: Verify JWT token after login
-  // 🔍 TEMP: Verify JWT token after login
+  // ✅ FIX: history loaded PER taskId
+  const [historyLoaded, setHistoryLoaded] = useState({});
 
+  const activeChat =
+    chats.find((c) => c.id === activeChatId) || null;
 
-  const createChat = () => {
-    const newChat = {
-      id: Date.now().toString(),
-      title: "New Chat",
-      messages: [],
+  // ===============================
+  // LOAD USER PROFILE
+  // ===============================
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUser(profile);
+      } catch (err) {
+        console.error("Failed to load user profile", err);
+      }
     };
-    setChats([newChat, ...chats]);
-    setActiveChatId(newChat.id);
+
+    loadUser();
+  }, []);
+
+  // ===============================
+  // TASK 1: LOAD USER TASKS (TABLE 3)
+  // ===============================
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const tasks = await fetchUserTasks();
+
+        const taskChats = tasks.map((task) => ({
+          id: task.TaskId,
+          title: task.TaskName,
+          messages: [],
+          meta: task,
+        }));
+
+        setChats(taskChats);
+
+        if (taskChats.length > 0) {
+          setActiveChatId(taskChats[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load user tasks", err);
+      }
+    };
+
+    loadTasks();
+  }, []);
+
+  // ===============================
+  // TASK 2: LOAD CHAT HISTORY (ONCE PER TASK)
+  // ===============================
+  useEffect(() => {
+    if (!activeChatId) return;
+    if (historyLoaded[activeChatId]) return; // 🔒 CRITICAL FIX
+
+    const loadChatHistory = async () => {
+      try {
+        const history = await fetchChatHistory(activeChatId);
+
+        const messages = history.map((item) => ({
+          id: `${item.Timestamp}-${item.Sender}`,
+          sender: item.Sender === "ai" ? "bot" : "user",
+          text: item.Message,
+        }));
+
+        setChats((prevChats) =>
+          prevChats.map((c) =>
+            c.id === activeChatId
+              ? { ...c, messages }
+              : c
+          )
+        );
+
+        // ✅ mark this task as loaded
+        setHistoryLoaded((prev) => ({
+          ...prev,
+          [activeChatId]: true,
+        }));
+      } catch (err) {
+        console.error("Failed to load chat history", err);
+      }
+    };
+
+    loadChatHistory();
+  }, [activeChatId, historyLoaded]);
+
+  // ===============================
+  // HANDLE TASK SWITCH
+  // ===============================
+  const handleSetActive = (id) => {
+    setActiveChatId(id);
   };
 
-  const deleteChat = (id) => {
-    const updated = chats.filter((c) => c.id !== id);
-    setChats(updated);
-    if (id === activeChatId && updated.length > 0) {
-      setActiveChatId(updated[0].id);
-    }
-  };
-
-  const renameChat = (id) => {
-    const name = prompt("Enter new name:");
-    if (!name) return;
-    setChats(
-      chats.map((c) =>
-        c.id === id ? { ...c, title: name } : c
-      )
-    );
-  };
-
-  const updateMessages = (msgs) => {
-    setChats(
-      chats.map((c) =>
-        c.id === activeChatId ? { ...c, messages: msgs } : c
+  // ===============================
+  // UPDATE MESSAGES (SAFE)
+  // ===============================
+  const updateMessages = (updater) => {
+    setChats((prevChats) =>
+      prevChats.map((c) =>
+        c.id === activeChatId
+          ? {
+              ...c,
+              messages:
+                typeof updater === "function"
+                  ? updater(c.messages || [])
+                  : updater,
+            }
+          : c
       )
     );
   };
@@ -58,12 +140,10 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   return (
     <div className="chat-layout">
       <Sidebar
+        user={user}
         chats={chats}
         activeId={activeChatId}
-        setActive={setActiveChatId}
-        onCreate={createChat}
-        onDelete={deleteChat}
-        onRename={renameChat}
+        setActive={handleSetActive}
         theme={theme}
         toggleTheme={toggleTheme}
         onLogout={onLogout}
@@ -71,11 +151,11 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
         setSidebarOpen={setSidebarOpen}
       />
 
+      {/* ALWAYS RENDER ChatWindow */}
       <ChatWindow
         chat={activeChat}
         updateMessages={updateMessages}
-        theme={theme}
-        sidebarOpen={sidebarOpen}
+        user={user}
       />
     </div>
   );

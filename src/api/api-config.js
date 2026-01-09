@@ -1,76 +1,104 @@
 // ===============================
-//  API CONFIG FOR AWS HTTP API
+// API CONFIG FOR AWS API GATEWAY
 // ===============================
 
-import { getToken } from "../AWS/auth";
+import { getIdToken } from "../AWS/auth";
 
-// ✅ Base URL from .env
+// Base URL from .env
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// ✅ HTTP API uses $default route (no /chat)
+// API endpoints
 export const ENDPOINTS = {
-  chat: `${API_BASE_URL}`,
+  chat: `${API_BASE_URL}/chat`,
 };
 
 // ===============================
-//  Generic Request Helper
+// SEND CHAT MESSAGE (CHAT → AI)
 // ===============================
-async function apiRequest(url, method = "POST", body = null) {
-  let token = null;
+export const sendChatMessage = async (chatId, text, userEmail) => {
+  const token = await getIdToken();
 
-  try {
-    token = await getToken(); // Cognito JWT (optional if API auth = NONE)
-  } catch {
-    token = null;
-  }
-
-  const headers = {
-    "Content-Type": "application/json",
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const options = {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : null,
-  };
-
-  const res = await fetch(url, options);
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API Error ${res.status}: ${text}`);
-  }
-
-  return res.json();
-}
-
-// ===============================
-//  SEND CHAT MESSAGE (BACKEND FORMAT)
-// ===============================
-export async function sendChatMessage(chatId, text) {
-  let userEmail = "unknown@user";
-
-  try {
-    const token = await getToken();
-    const decoded = JSON.parse(atob(token.split(".")[1]));
-    userEmail = decoded.email || decoded.username;
-  } catch {
-    console.warn("Unable to extract user email from token");
+  if (!token) {
+    throw new Error("No ID token found. User not authenticated.");
   }
 
   const payload = {
     action: "prompt",
     session: {
       UserId: userEmail,
-      SessionId: chatId,
+      SessionId: chatId, // TaskId
       UserPrompt: text,
     },
   };
 
-  return apiRequest(ENDPOINTS.chat, "POST", payload);
-}
+  const response = await fetch(ENDPOINTS.chat, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
 
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error ${response.status}: ${errText}`);
+  }
+
+  return response.json();
+};
+
+// ===============================
+// GET USER TASKS (TABLE 3)
+// ===============================
+export const fetchUserTasks = async () => {
+  const token = await getIdToken();
+
+  if (!token) {
+    throw new Error("No ID token found. User not authenticated.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/tasks`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error ${response.status}: ${errText}`);
+  }
+
+  return response.json();
+};
+
+// ===============================
+// GET CHAT HISTORY (TABLE 4)
+// ===============================
+export const fetchChatHistory = async (taskId) => {
+  const token = await getIdToken();
+
+  if (!token) {
+    throw new Error("No ID token found. User not authenticated.");
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/chat-history?taskId=${encodeURIComponent(taskId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error ${response.status}: ${errText}`);
+  }
+
+  return response.json();
+};
