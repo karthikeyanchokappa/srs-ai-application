@@ -1,12 +1,8 @@
 // src/Components/Chat/Chat.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../Sidebar/Sidebar";
 import ChatWindow from "../ChatWindow/ChatWindow";
 import { getUserProfile } from "../../AWS/auth";
-import {
-  fetchUserTasks,
-  fetchChatHistory,
-} from "../../api/api-config";
 import "./Chat.css";
 
 const Chat = ({ theme, toggleTheme, onLogout }) => {
@@ -18,16 +14,13 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   const [user, setUser] = useState(null);
 
   // ===============================
-  // CHAT / TASK SESSIONS
+  // SINGLE CHAT SESSION
   // ===============================
-  const [chats, setChats] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(null);
-
-  // ✅ FIX: history loaded PER taskId
-  const [historyLoaded, setHistoryLoaded] = useState({});
-
-  const activeChat =
-    chats.find((c) => c.id === activeChatId) || null;
+  const [chat, setChat] = useState({
+    id: "default-chat", // simple session id
+    title: "New Chat",
+    messages: [],
+  });
 
   // ===============================
   // LOAD USER PROFILE
@@ -46,104 +39,25 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   }, []);
 
   // ===============================
-  // TASK 1: LOAD USER TASKS (TABLE 3)
-  // ===============================
-  useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        const tasks = await fetchUserTasks();
-
-        const taskChats = tasks.map((task) => ({
-          id: task.TaskId,
-          title: task.TaskName,
-          messages: [],
-          meta: task,
-        }));
-
-        setChats(taskChats);
-
-        if (taskChats.length > 0) {
-          setActiveChatId(taskChats[0].id);
-        }
-      } catch (err) {
-        console.error("Failed to load user tasks", err);
-      }
-    };
-
-    loadTasks();
-  }, []);
-
-  // ===============================
-  // TASK 2: LOAD CHAT HISTORY (ONCE PER TASK)
-  // ===============================
-  useEffect(() => {
-    if (!activeChatId) return;
-    if (historyLoaded[activeChatId]) return; // 🔒 CRITICAL FIX
-
-    const loadChatHistory = async () => {
-      try {
-        const history = await fetchChatHistory(activeChatId);
-
-        const messages = history.map((item) => ({
-          id: `${item.Timestamp}-${item.Sender}`,
-          sender: item.Sender === "ai" ? "bot" : "user",
-          text: item.Message,
-        }));
-
-        setChats((prevChats) =>
-          prevChats.map((c) =>
-            c.id === activeChatId
-              ? { ...c, messages }
-              : c
-          )
-        );
-
-        // ✅ mark this task as loaded
-        setHistoryLoaded((prev) => ({
-          ...prev,
-          [activeChatId]: true,
-        }));
-      } catch (err) {
-        console.error("Failed to load chat history", err);
-      }
-    };
-
-    loadChatHistory();
-  }, [activeChatId, historyLoaded]);
-
-  // ===============================
-  // HANDLE TASK SWITCH
-  // ===============================
-  const handleSetActive = (id) => {
-    setActiveChatId(id);
-  };
-
-  // ===============================
-  // UPDATE MESSAGES (SAFE)
+  // UPDATE MESSAGES 
   // ===============================
   const updateMessages = (updater) => {
-    setChats((prevChats) =>
-      prevChats.map((c) =>
-        c.id === activeChatId
-          ? {
-              ...c,
-              messages:
-                typeof updater === "function"
-                  ? updater(c.messages || [])
-                  : updater,
-            }
-          : c
-      )
-    );
+    setChat((prev) => ({
+      ...prev,
+      messages:
+        typeof updater === "function"
+          ? updater(prev.messages)
+          : updater,
+    }));
   };
 
   return (
     <div className="chat-layout">
       <Sidebar
         user={user}
-        chats={chats}
-        activeId={activeChatId}
-        setActive={handleSetActive}
+        chats={[chat]}            // sidebar still shows 1 chat
+        activeId={chat.id}
+        setActive={() => {}}      // no switching
         theme={theme}
         toggleTheme={toggleTheme}
         onLogout={onLogout}
@@ -151,9 +65,8 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
         setSidebarOpen={setSidebarOpen}
       />
 
-      {/* ALWAYS RENDER ChatWindow */}
       <ChatWindow
-        chat={activeChat}
+        chat={chat}
         updateMessages={updateMessages}
         user={user}
       />

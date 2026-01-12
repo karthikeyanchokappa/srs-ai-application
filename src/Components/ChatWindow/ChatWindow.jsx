@@ -20,7 +20,7 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
   }, [chat?.messages, isTyping]);
 
   /* ===============================
-     ADD MESSAGE (SAFE)
+     ADD MESSAGE (✅ FIXED — SAFE)
   =============================== */
   const addMessage = (msg) => {
     updateMessages((prev) => [...prev, msg]);
@@ -33,7 +33,7 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
     const text = input.trim();
     if (!text) return;
 
-    // Always show user's message
+    // Always show user's message immediately
     addMessage({
       id: Date.now().toString(),
       sender: "user",
@@ -43,7 +43,7 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
     setInput("");
     setIsTyping(true);
 
-    // If no task selected → show warning but DO NOT break UI
+    // If chat or user missing → warn but keep UI alive
     if (!chat || !user) {
       addMessage({
         id: "warn_" + Date.now(),
@@ -89,10 +89,7 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
 
   return (
     <main className="chat-main chat-layout">
-      {/* HEADER */}
-   
-
-      {/* MESSAGES — ALWAYS RENDER */}
+      {/* MESSAGES */}
       <div className="messages" ref={scrollRef}>
         {chat?.messages?.length === 0 && (
           <div className="welcome-screen">
@@ -163,3 +160,4 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
 };
 
 export default ChatWindow;
+
