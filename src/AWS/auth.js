@@ -6,7 +6,9 @@ import {
 } from "aws-amplify/auth";
 
 /**
- * STEP 1: Send Email OTP
+ * ============================
+ * STEP 1: SEND EMAIL OTP
+ * ============================
  */
 export const sendOtp = async (email) => {
   return signIn({
@@ -19,7 +21,9 @@ export const sendOtp = async (email) => {
 };
 
 /**
- * STEP 2: Verify OTP
+ * ============================
+ * STEP 2: VERIFY OTP
+ * ============================
  */
 export const verifyOtp = async (code) => {
   return confirmSignIn({
@@ -28,45 +32,54 @@ export const verifyOtp = async (code) => {
 };
 
 /**
- * GET ACCESS TOKEN (optional)
- */
-export const getAccessToken = async () => {
-  try {
-    const session = await fetchAuthSession();
-    return session.tokens?.accessToken?.toString() || null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * ✅ GET ID TOKEN (USED BY BACKEND API)
+ * ============================
+ * GET ID TOKEN (✅ USE THIS FOR API GATEWAY JWT AUTH)
+ * ============================
  */
 export const getIdToken = async () => {
   try {
     const session = await fetchAuthSession();
     return session.tokens?.idToken?.toString() || null;
-  } catch {
+  } catch (err) {
+    console.error("getIdToken failed", err);
     return null;
   }
 };
 
 /**
+ * ============================
+ * GET ACCESS TOKEN (OPTIONAL – DO NOT USE FOR API GW)
+ * ============================
+ */
+export const getAccessToken = async () => {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.accessToken?.toString() || null;
+  } catch (err) {
+    console.error("getAccessToken failed", err);
+    return null;
+  }
+};
+
+/**
+ * ============================
  * GET USER PROFILE (FROM ID TOKEN)
+ * ============================
  */
 export const getUserProfile = async () => {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();
+
     if (!idToken) return null;
 
     const payload = JSON.parse(atob(idToken.split(".")[1]));
-    const email = payload.email;
 
     return {
-      email,
-      name: payload.name || email,
-      initial: (payload.name || email)[0].toUpperCase(),
+      email: payload.email,
+      name: payload.name || payload.email,
+      initial: (payload.name || payload.email)[0].toUpperCase(),
+      sub: payload.sub,
     };
   } catch (err) {
     console.error("getUserProfile failed", err);
@@ -75,8 +88,14 @@ export const getUserProfile = async () => {
 };
 
 /**
+ * ============================
  * LOGOUT
+ * ============================
  */
 export const logout = async () => {
-  await signOut();
+  try {
+    await signOut();
+  } catch (err) {
+    console.error("logout failed", err);
+  }
 };

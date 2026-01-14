@@ -17,7 +17,7 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   // SINGLE CHAT SESSION
   // ===============================
   const [chat, setChat] = useState({
-    id: "default-chat", // simple session id
+    id: "default-chat",
     title: "New Chat",
     messages: [],
   });
@@ -39,7 +39,7 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
   }, []);
 
   // ===============================
-  // UPDATE MESSAGES 
+  // UPDATE MESSAGES
   // ===============================
   const updateMessages = (updater) => {
     setChat((prev) => ({
@@ -55,9 +55,9 @@ const Chat = ({ theme, toggleTheme, onLogout }) => {
     <div className="chat-layout">
       <Sidebar
         user={user}
-        chats={[chat]}            // sidebar still shows 1 chat
+        chats={[chat]}
         activeId={chat.id}
-        setActive={() => {}}      // no switching
+        setActive={() => {}}
         theme={theme}
         toggleTheme={toggleTheme}
         onLogout={onLogout}

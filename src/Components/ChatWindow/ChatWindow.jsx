@@ -1,8 +1,10 @@
+// src/Components/ChatWindow/ChatWindow.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatWindow.css";
 import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { sendChatMessage } from "../../api/api-config";
+import { getIdToken } from "../../AWS/auth";
 
 const ChatWindow = ({ chat, updateMessages, user }) => {
   const [input, setInput] = useState("");
@@ -20,20 +22,20 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
   }, [chat?.messages, isTyping]);
 
   /* ===============================
-     ADD MESSAGE (✅ FIXED — SAFE)
+     ADD MESSAGE
   =============================== */
   const addMessage = (msg) => {
     updateMessages((prev) => [...prev, msg]);
   };
 
   /* ===============================
-     SEND MESSAGE
+     SEND MESSAGE (✅ CORRECT JWT FLOW)
   =============================== */
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
-    // Always show user's message immediately
+    // Show user message immediately
     addMessage({
       id: Date.now().toString(),
       sender: "user",
@@ -43,7 +45,6 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
     setInput("");
     setIsTyping(true);
 
-    // If chat or user missing → warn but keep UI alive
     if (!chat || !user) {
       addMessage({
         id: "warn_" + Date.now(),
@@ -55,10 +56,18 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
     }
 
     try {
+      // 🔑 GET **ID TOKEN** (THIS IS CORRECT)
+      const token = await getIdToken();
+
+      if (!token) {
+        throw new Error("No ID token found");
+      }
+
       const res = await sendChatMessage(
         chat.id,
         text,
-        user.email
+        user.email,
+        token
       );
 
       addMessage({
@@ -66,7 +75,8 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
         sender: "bot",
         text: res.reply || res.message || "No response from server",
       });
-    } catch {
+    } catch (err) {
+      console.error("Chat API error", err);
       addMessage({
         id: "err_" + Date.now(),
         sender: "bot",
@@ -89,15 +99,10 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
 
   return (
     <main className="chat-main chat-layout">
-      {/* MESSAGES */}
       <div className="messages" ref={scrollRef}>
         {chat?.messages?.length === 0 && (
           <div className="welcome-screen">
-            <div className="welcome-inner">
-              <h1 className="welcome-title">
-                What are you working on?
-              </h1>
-            </div>
+            <h1 className="welcome-title">What are you working on?</h1>
           </div>
         )}
 
@@ -120,7 +125,6 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
         )}
       </div>
 
-      {/* INPUT BAR — OLD UI */}
       <div className="chat-input-bar">
         <div className="chat-input-wrapper">
           <label className="cw-icon cw-upload">
@@ -160,4 +164,3 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
 };
 
 export default ChatWindow;
-

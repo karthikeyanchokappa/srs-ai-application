@@ -2,31 +2,30 @@
 // API CONFIG FOR AWS API GATEWAY
 // ===============================
 
-import { getIdToken } from "../AWS/auth";
-
-// Base URL from .env
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// API endpoints
 export const ENDPOINTS = {
   chat: `${API_BASE_URL}/chat`,
 };
 
 // ===============================
-// SEND CHAT MESSAGE (CHAT → AI)
+// SEND CHAT MESSAGE (JWT AUTH)
 // ===============================
-export const sendChatMessage = async (chatId, text, userEmail) => {
-  const token = await getIdToken();
-
-  if (!token) {
-    throw new Error("No ID token found. User not authenticated.");
+export const sendChatMessage = async (
+  chatId,
+  text,
+  userEmail,
+  idToken // ✅ ID TOKEN
+) => {
+  if (!idToken) {
+    throw new Error("No ID token provided");
   }
 
   const payload = {
     action: "prompt",
     session: {
       UserId: userEmail,
-      SessionId: chatId, // TaskId
+      SessionId: chatId,
       UserPrompt: text,
     },
   };
@@ -35,7 +34,7 @@ export const sendChatMessage = async (chatId, text, userEmail) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
+      Authorization: `Bearer ${idToken}`, // ✅ FIXED
     },
     body: JSON.stringify(payload),
   });
@@ -47,4 +46,3 @@ export const sendChatMessage = async (chatId, text, userEmail) => {
 
   return response.json();
 };
-
