@@ -4,7 +4,7 @@ import "./ChatWindow.css";
 import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { sendChatMessage } from "../../api/api-config";
-import { getIdToken } from "../../AWS/auth";
+import { getAccessToken, getIdToken } from "../../AWS/auth";
 
 const ChatWindow = ({ chat, updateMessages, user }) => {
   const [input, setInput] = useState("");
@@ -57,7 +57,9 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
 
     try {
       // 🔑 GET **ID TOKEN** (THIS IS CORRECT)
-      const token = await getIdToken();
+      // const token = await getIdToken();
+      const token = await getAccessToken();
+      console.log("Authorization Header Value:", `Bearer ${token}`);
 
       if (!token) {
         throw new Error("No ID token found");

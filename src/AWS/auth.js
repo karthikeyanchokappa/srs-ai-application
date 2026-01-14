@@ -70,6 +70,7 @@ export const getUserProfile = async () => {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();
+    // const idToken = session.tokens?.accessToken?.toString();
 
     if (!idToken) return null;
 

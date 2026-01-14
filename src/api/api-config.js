@@ -34,10 +34,12 @@ export const sendChatMessage = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`, // ✅ FIXED
+      "Authorization": `Bearer ${idToken}`, // ✅ FIXED
     },
     body: JSON.stringify(payload),
   });
+
+  console.log("Authorization Header Value:", `Bearer ${idToken}`);
 
   if (!response.ok) {
     const errText = await response.text();
