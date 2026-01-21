@@ -3,8 +3,8 @@ import "./Login.css";
 import { verifyOtp } from "../../AWS/auth";
 
 const OtpScreen = ({ email, onSuccess, onBack }) => {
-  // 🔥 Cognito Email OTP = 8 digits
   const [otp, setOtp] = useState(["", "", "", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const inputs = useRef([]);
 
   const handleChange = (value, index) => {
@@ -14,7 +14,6 @@ const OtpScreen = ({ email, onSuccess, onBack }) => {
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < otp.length - 1) {
       inputs.current[index + 1]?.focus();
     }
@@ -28,8 +27,6 @@ const OtpScreen = ({ email, onSuccess, onBack }) => {
 
   const handlePaste = (e) => {
     const data = e.clipboardData.getData("Text").trim();
-
-    // Accept only 8-digit OTP
     if (/^\d{8}$/.test(data)) {
       setOtp(data.split(""));
       inputs.current[7]?.focus();
@@ -37,18 +34,25 @@ const OtpScreen = ({ email, onSuccess, onBack }) => {
   };
 
   const handleVerify = async () => {
+    if (loading) return;
+    setLoading(true);
+
     try {
       await verifyOtp(otp.join(""));
-      onSuccess();
+
+      // ✅ REQUIRED: persist login state
+      localStorage.setItem("isAuthenticated", "true");
+
+      onSuccess(); // redirect to Chat
     } catch (err) {
       alert(err.message || "Invalid OTP");
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page fade-in">
       <div className="login-card slide-up">
-
         <h1 className="login-title">Verify OTP</h1>
         <p className="login-sub">
           Enter the 8-digit OTP sent to <b>{email}</b>
@@ -70,14 +74,17 @@ const OtpScreen = ({ email, onSuccess, onBack }) => {
           ))}
         </div>
 
-        <button className="login-btn" onClick={handleVerify}>
-          Verify & Login
+        <button
+          className="login-btn"
+          onClick={handleVerify}
+          disabled={loading}
+        >
+          {loading ? "Verifying..." : "Verify & Login"}
         </button>
 
-        <button className="back-btn" onClick={onBack}>
+        <button className="back-btn" onClick={onBack} disabled={loading}>
           ← Back
         </button>
-
       </div>
     </div>
   );

@@ -1,13 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Login.css";
 import OtpScreen from "./OtpScreen";
-import { sendOtp, logout } from "../../AWS/auth";
+import { sendOtp, getAccessToken } from "../../AWS/auth";
 
 const Login = ({ onAuthenticate }) => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ✅ NEW: auto-login if session exists
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          onAuthenticate(); // 🔥 skip login screen
+        }
+      } catch {
+        // no active session → stay on login
+      }
+    };
+
+    checkSession();
+  }, [onAuthenticate]);
 
   const handleSendOtp = async () => {
     if (!email.trim()) {
@@ -19,12 +35,7 @@ const Login = ({ onAuthenticate }) => {
     setLoading(true);
 
     try {
-      // 🔥 IMPORTANT: clear any existing session
-      await logout();
-
-      // 🔥 always start a fresh OTP flow
       await sendOtp(email);
-
       setStep("otp");
     } catch (err) {
       setError(err.message || "Failed to send OTP");
@@ -35,7 +46,6 @@ const Login = ({ onAuthenticate }) => {
 
   return (
     <div className="login-page fade-in">
-
       {step === "email" && (
         <div className="login-card slide-up">
           <h1 className="login-title">Welcome Back</h1>
@@ -72,7 +82,6 @@ const Login = ({ onAuthenticate }) => {
           onBack={() => setStep("email")}
         />
       )}
-
     </div>
   );
 };

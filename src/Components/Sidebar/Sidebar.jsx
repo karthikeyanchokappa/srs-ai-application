@@ -1,5 +1,5 @@
 // src/Components/Sidebar/Sidebar.jsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import "./Sidebar.css";
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "./icons";
 
 const Sidebar = ({
-  user,               // logged-in user profile
+  user,
   chats = [],
   activeId,
   setActive,
@@ -28,21 +28,52 @@ const Sidebar = ({
   const [search, setSearch] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Filter chats
+  /* ===============================
+     SORT CHATS (MEMOIZED)
+  =============================== */
+  const sortedChats = useMemo(() => {
+    return [...chats].sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [chats]);
+
   const filteredChats = search
-    ? chats.filter((c) =>
-        c.title.toLowerCase().includes(search.trim().toLowerCase())
+    ? sortedChats.filter((c) =>
+        (c.title || "")
+          .toLowerCase()
+          .includes(search.trim().toLowerCase())
       )
-    : chats;
+    : sortedChats;
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
     setProfileOpen(false);
   };
 
+  /* ===============================
+     RENAME HANDLER (UI ONLY)
+  =============================== */
+  const handleRename = (chatId, currentTitle) => {
+    const newTitle = prompt("Rename chat", currentTitle || "");
+    if (!newTitle || !newTitle.trim()) return;
+    onRename?.(chatId, newTitle.trim());
+  };
+
+  /* ===============================
+     DELETE HANDLER (CONFIRM)
+  =============================== */
+  const handleDelete = (chatId) => {
+    if (!confirm("Delete this chat permanently?")) return;
+    onDelete?.(chatId);
+  };
+
   return (
     <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
-      {/* TOP BAR */}
+      {/* ===============================
+          TOP BAR
+      =============================== */}
       <div className="sidebar-topbar">
         <button className="menu-btn" onClick={toggleSidebar}>
           ☰
@@ -50,7 +81,9 @@ const Sidebar = ({
         {sidebarOpen && <div className="sidebar-logo">ChatAI</div>}
       </div>
 
-      {/* SEARCH */}
+      {/* ===============================
+          SEARCH
+      =============================== */}
       {sidebarOpen && (
         <div className="sidebar-search-container">
           <input
@@ -72,7 +105,9 @@ const Sidebar = ({
         </div>
       )}
 
-      {/* NEW CHAT */}
+      {/* ===============================
+          NEW CHAT
+      =============================== */}
       {sidebarOpen && (
         <button className="new-chat-btn" onClick={onCreate}>
           <PlusIcon />
@@ -82,44 +117,50 @@ const Sidebar = ({
 
       {sidebarOpen && <div className="label">Your Chats</div>}
 
-      {/* CHAT LIST */}
+      {/* ===============================
+          CHAT LIST
+      =============================== */}
       <div className="chat-list">
         {filteredChats.map((chat) => (
           <div
             key={chat.id}
-            className={`chat-item ${
-              chat.id === activeId ? "active" : ""
-            }`}
+            className={`chat-item ${chat.id === activeId ? "active" : ""}`}
             onClick={() => setActive(chat.id)}
           >
             <div className="chat-left">
               <ChatIcon />
               {sidebarOpen && (
-                <span className="chat-title">{chat.title}</span>
+                <span className="chat-title">
+                  {chat.title || "New Chat"}
+                </span>
               )}
             </div>
 
             {sidebarOpen && (
               <div className="chat-right">
-                <button
-                  className="icon-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRename(chat.id);
-                  }}
-                >
-                  <EditIcon />
-                </button>
+                {onRename && (
+                  <button
+                    className="icon-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRename(chat.id, chat.title);
+                    }}
+                  >
+                    <EditIcon />
+                  </button>
+                )}
 
-                <button
-                  className="icon-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(chat.id);
-                  }}
-                >
-                  <DeleteIcon />
-                </button>
+                {onDelete && (
+                  <button
+                    className="icon-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(chat.id);
+                    }}
+                  >
+                    <DeleteIcon />
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -130,7 +171,9 @@ const Sidebar = ({
         )}
       </div>
 
-      {/* PROFILE */}
+      {/* ===============================
+          PROFILE
+      =============================== */}
       {sidebarOpen && (
         <div className="profile-container">
           <div
@@ -172,11 +215,7 @@ const Sidebar = ({
                   className="icon-btn"
                   onClick={toggleTheme}
                 >
-                  {theme === "dark" ? (
-                    <SunIcon />
-                  ) : (
-                    <MoonIcon />
-                  )}
+                  {theme === "dark" ? <SunIcon /> : <MoonIcon />}
                 </button>
               </div>
             </div>

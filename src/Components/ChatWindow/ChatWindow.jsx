@@ -1,12 +1,14 @@
-// src/Components/ChatWindow/ChatWindow.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "./ChatWindow.css";
 import { UploadIcon, MicIcon, SendIcon } from "./InputIcons";
 import MarkdownRenderer from "./MarkdownRenderer";
-import { sendChatMessage } from "../../api/api-config";
-import { getAccessToken, getIdToken } from "../../AWS/auth";
+import {
+  sendChatMessage,
+  initialiseChat, // 🔥 ADD
+} from "../../api/api-config";
+import { getAccessToken } from "../../AWS/auth";
 
-const ChatWindow = ({ chat, updateMessages, user }) => {
+const ChatWindow = ({ chat, updateMessages, user, onFirstMessage }) => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
@@ -22,22 +24,27 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
   }, [chat?.messages, isTyping]);
 
   /* ===============================
-     ADD MESSAGE
+     ADD MESSAGE (UI ONLY)
   =============================== */
   const addMessage = (msg) => {
     updateMessages((prev) => [...prev, msg]);
   };
 
   /* ===============================
-     SEND MESSAGE (✅ CORRECT JWT FLOW)
+     SEND MESSAGE
   =============================== */
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
-    // Show user message immediately
+    // 🔥 Notify parent on FIRST message (for title)
+    if (chat?.id?.startsWith("temp-") && onFirstMessage) {
+      onFirstMessage(text);
+    }
+
+    // Optimistic UI — user message
     addMessage({
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       sender: "user",
       text,
     });
@@ -45,26 +52,16 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
     setInput("");
     setIsTyping(true);
 
-    if (!chat || !user) {
-      addMessage({
-        id: "warn_" + Date.now(),
-        sender: "bot",
-        text: "⚠️ Please select a task from the left sidebar.",
-      });
+    if (!chat?.id || !user) {
       setIsTyping(false);
       return;
     }
 
     try {
-      // 🔑 GET **ID TOKEN** (THIS IS CORRECT)
-      // const token = await getIdToken();
       const token = await getAccessToken();
-      console.log("Authorization Header Value:", `Bearer ${token}`);
+      if (!token) throw new Error("No token");
 
-      if (!token) {
-        throw new Error("No ID token found");
-      }
-
+      // 🔹 Send message
       const res = await sendChatMessage(
         chat.id,
         text,
@@ -72,15 +69,32 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
         token
       );
 
+      // 🔹 Optimistic bot reply
       addMessage({
-        id: "bot_" + Date.now(),
+        id: `bot-${Date.now()}`,
         sender: "bot",
-        text: res.reply || res.message || "No response from server",
+        text: res.reply || "No response",
       });
+
+      // 🔥 CRITICAL FIX:
+      // Re-fetch latest chat history from backend
+      const data = await initialiseChat(
+        token,
+        user.email,
+        res.sessionId || chat.id
+      );
+
+      updateMessages(
+        (data.messages || []).map((m, i) => ({
+          id: `msg-${i}`,
+          sender: m.role === "assistant" ? "bot" : "user",
+          text: m.content?.[0]?.text || "",
+        }))
+      );
     } catch (err) {
-      console.error("Chat API error", err);
+      console.error("Chat error:", err);
       addMessage({
-        id: "err_" + Date.now(),
+        id: `err-${Date.now()}`,
         sender: "bot",
         text: "❌ Failed to connect to server",
       });
@@ -108,8 +122,8 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
           </div>
         )}
 
-        {chat?.messages?.map((m) => (
-          <div key={m.id} className={`msg-row ${m.sender}`}>
+        {chat?.messages?.map((m, index) => (
+          <div key={m.id || index} className={`msg-row ${m.sender}`}>
             <div className="msg-bubble">
               <MarkdownRenderer text={m.text} />
             </div>
@@ -151,10 +165,6 @@ const ChatWindow = ({ chat, updateMessages, user }) => {
               }
             }}
           />
-
-          <button className="cw-icon cw-mic">
-            <MicIcon />
-          </button>
 
           <button className="cw-send" onClick={handleSend}>
             <SendIcon />

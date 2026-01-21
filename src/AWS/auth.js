@@ -33,7 +33,7 @@ export const verifyOtp = async (code) => {
 
 /**
  * ============================
- * GET ID TOKEN (✅ USE THIS FOR API GATEWAY JWT AUTH)
+ * GET ID TOKEN (USE FOR API GW JWT)
  * ============================
  */
 export const getIdToken = async () => {
@@ -48,7 +48,7 @@ export const getIdToken = async () => {
 
 /**
  * ============================
- * GET ACCESS TOKEN (OPTIONAL – DO NOT USE FOR API GW)
+ * GET ACCESS TOKEN (OPTIONAL)
  * ============================
  */
 export const getAccessToken = async () => {
@@ -63,14 +63,13 @@ export const getAccessToken = async () => {
 
 /**
  * ============================
- * GET USER PROFILE (FROM ID TOKEN)
+ * GET USER PROFILE
  * ============================
  */
 export const getUserProfile = async () => {
   try {
     const session = await fetchAuthSession();
     const idToken = session.tokens?.idToken?.toString();
-    // const idToken = session.tokens?.accessToken?.toString();
 
     if (!idToken) return null;
 
@@ -90,12 +89,12 @@ export const getUserProfile = async () => {
 
 /**
  * ============================
- * LOGOUT
+ * LOGOUT (🔥 FIXED)
  * ============================
  */
 export const logout = async () => {
   try {
-    await signOut();
+    await signOut({ global: true }); // ✅ ONLY REQUIRED CHANGE
   } catch (err) {
     console.error("logout failed", err);
   }
